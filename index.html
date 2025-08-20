@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSL Sign Search</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for a clean look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Main application container -->
+    <div class="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center gap-6">
+
+        <!-- Search input field -->
+        <input type="text" id="search-input" placeholder="Type a word..."
+               class="w-full p-4 text-center text-xl border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none transition-all duration-300">
+
+        <!-- Display container for the URL and explanation -->
+        <div id="display-container" class="w-full min-h-32 flex items-center justify-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 transition-all duration-300 overflow-hidden text-center p-4">
+            <!-- Message to the user -->
+            <p id="message" class="text-gray-500 text-lg font-medium">Start typing to get a link for the BSL sign.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Get references to the HTML elements
+        const searchInput = document.getElementById('search-input');
+        const displayContainer = document.getElementById('display-container');
+
+        // Base URL for the British Sign Language dictionary
+        const baseUrl = 'https://signd.co.uk/view/';
+
+        /**
+         * Updates the display with the URL for the BSL sign.
+         * @param {string} word - The word to search for.
+         */
+        function updateDisplay(word) {
+            // Trim whitespace and convert to lowercase for the URL path
+            const normalizedWord = word.trim().toLowerCase();
+            // Capitalize the first letter for the query parameter
+            const capitalizedWord = normalizedWord.charAt(0).toUpperCase() + normalizedWord.slice(1);
+
+            // Clear previous content
+            displayContainer.innerHTML = '';
+
+            if (normalizedWord === '') {
+                // Show initial message if the input is empty
+                displayContainer.innerHTML = `
+                    <p class="text-gray-500 text-lg font-medium">Start typing to get a link for the BSL sign.</p>
+                `;
+                displayContainer.classList.add('justify-center');
+                displayContainer.classList.remove('justify-start', 'flex-col');
+            } else {
+                // Construct the full URL based on the new site's structure
+                // The URL includes both the lowercase word in the path and capitalized in the query
+                const url = `${baseUrl}${normalizedWord}?q=${capitalizedWord}`;
+                
+                // Display a message explaining the limitation and providing the link
+                displayContainer.innerHTML = `
+                    <p class="text-gray-700 text-base font-semibold mb-2">
+                        Due to security settings, we cannot display the image directly. Please click the link below to view the sign for '${capitalizedWord}'.
+                    </p>
+                    <a href="${url}" target="_blank" class="text-blue-600 hover:text-blue-800 underline text-lg font-medium break-all">
+                        ${url}
+                    </a>
+                `;
+                displayContainer.classList.remove('justify-center');
+                displayContainer.classList.add('justify-start', 'flex-col');
+            }
+        }
+
+        // Add an event listener to the input field
+        searchInput.addEventListener('input', (event) => {
+            updateDisplay(event.target.value);
+        });
+
+        // Set initial state
+        updateDisplay('');
+    </script>
+
+</body>
+</html>
