@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSL Sign Search</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for a clean look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Main application container -->
+    <div class="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center gap-6">
+
+        <!-- Search input field -->
+        <input type="text" id="search-input" placeholder="Type a word..."
+               class="w-full p-4 text-center text-xl border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none transition-all duration-300">
+
+        <!-- Display container for the iframe -->
+        <div class="w-full h-[60vh] flex items-center justify-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 overflow-hidden text-center p-2">
+            <!-- Iframe to embed the external website's page -->
+            <iframe id="sign-iframe" title="BSL Sign Video" class="w-full h-full rounded-lg" frameborder="0"></iframe>
+            <!-- Initial message to the user -->
+            <p id="message" class="absolute text-gray-500 text-lg font-medium">Type a word to view its BSL sign video.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Get references to the HTML elements
+        const searchInput = document.getElementById('search-input');
+        const signIframe = document.getElementById('sign-iframe');
+        const message = document.getElementById('message');
+
+        // Base URL for the Signd dictionary
+        const baseUrl = 'https://signd.co.uk/view/';
+
+        /**
+         * Updates the iframe source with the URL for the BSL sign.
+         * @param {string} word - The word to search for.
+         */
+        function updateDisplay(word) {
+            const normalizedWord = word.trim().toLowerCase();
+            const capitalizedWord = normalizedWord.charAt(0).toUpperCase() + normalizedWord.slice(1);
+
+            if (normalizedWord === '') {
+                // If input is empty, clear the iframe and show the message
+                signIframe.src = '';
+                signIframe.classList.add('hidden');
+                message.classList.remove('hidden');
+            } else {
+                // Hide the message and show the iframe
+                signIframe.classList.remove('hidden');
+                message.classList.add('hidden');
+
+                // Construct the full URL based on the site's structure
+                const url = `${baseUrl}${normalizedWord}?q=${capitalizedWord}`;
+                
+                // Set the iframe's source to the constructed URL
+                signIframe.src = url;
+            }
+        }
+
+        // Add an event listener to the input field
+        searchInput.addEventListener('input', (event) => {
+            updateDisplay(event.target.value);
+        });
+
+        // Set initial state
+        updateDisplay('');
+    </script>
+
+</body>
+</html>
