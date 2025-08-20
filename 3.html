@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BSL Sign Finder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+  <!-- Main container -->
+  <div class="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center gap-6">
+
+    <h1 class="text-3xl font-bold text-gray-800">✋ BSL Sign Finder</h1>
+    <p class="text-gray-600 text-center">
+      Type a word below and I'll fetch the main sign image from the BSL dictionary.
+    </p>
+
+    <!-- Word input and button -->
+    <div class="w-full flex gap-2">
+      <input type="text" id="wordInput" placeholder="e.g. apple"
+             class="flex-grow p-4 text-xl border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none transition-all duration-300">
+      <button id="findButton"
+              class="bg-blue-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-blue-700 transition-colors duration-300">
+        Find Sign
+      </button>
+    </div>
+
+    <!-- Results -->
+    <div id="results"
+         class="w-full min-h-[50vh] flex flex-col justify-center items-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 transition-all duration-300 p-4 overflow-hidden text-center text-gray-500 text-lg font-medium">
+      The BSL sign image will appear here.
+    </div>
+  </div>
+
+  <script>
+    const wordInput = document.getElementById("wordInput");
+    const findButton = document.getElementById("findButton");
+    const resultsDiv = document.getElementById("results");
+
+    function showLoading() {
+      resultsDiv.innerHTML = `
+        <div class="flex flex-col items-center space-y-2 text-gray-700">
+          <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 
+                     5.291A7.962 7.962 0 014 12H0c0 
+                     3.042 1.135 5.824 3 7.938l3-2.647z"/>
+          </svg>
+          <span class="text-xl">Fetching image...</span>
+        </div>
+      `;
+    }
+
+    async function fetchAndExtract() {
+      const word = wordInput.value.trim().toLowerCase();
+      if (!word) {
+        resultsDiv.textContent = "Please enter a word.";
+        return;
+      }
+
+      const url = `https://www.british-sign.co.uk/british-sign-language/how-to-sign/${encodeURIComponent(word)}/`;
+      showLoading();
+
+      try {
+        const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+        const res = await fetch(proxyUrl);
+        const html = await res.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        const base = new URL(url);
+
+        const imageEls = [...doc.querySelectorAll("img")];
+        const imageUrls = imageEls.map(el => new URL(el.getAttribute("src"), base).href);
+
+        if (imageUrls.length === 0) {
+          resultsDiv.textContent = "No images found for this word.";
+          return;
+        }
+
+        let largestImageUrl = null;
+        let maxArea = 0;
+
+        const loadPromises = imageUrls.map(imageUrl => new Promise(resolve => {
+          const img = new Image();
+          img.onload = () => {
+            const area = img.naturalWidth * img.naturalHeight;
+            if (area > maxArea) {
+              maxArea = area;
+              largestImageUrl = imageUrl;
+            }
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = imageUrl;
+        }));
+
+        await Promise.all(loadPromises);
+
+        resultsDiv.innerHTML = "";
+        if (largestImageUrl) {
+          const imgElement = document.createElement("img");
+          imgElement.src = largestImageUrl;
+          imgElement.alt = `BSL sign for ${word}`;
+          imgElement.className = "rounded-lg max-w-full max-h-full mx-auto shadow-lg";
+          resultsDiv.appendChild(imgElement);
+        } else {
+          resultsDiv.textContent = "Could not determine the main image.";
+        }
+
+      } catch (e) {
+        console.error(e);
+        resultsDiv.textContent = "Failed to fetch the page. The site may be blocking requests.";
+      }
+    }
+
+    findButton.addEventListener("click", fetchAndExtract);
+    wordInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") fetchAndExtract();
+    });
+  </script>
+</body>
+</html>
