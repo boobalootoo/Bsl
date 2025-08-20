@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BSL Sign Finder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+  <!-- Main container -->
+  <div class="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center gap-6">
+
+    <h1 class="text-3xl font-bold text-gray-800">✋ BSL Sign Finder</h1>
+    <p class="text-gray-600 text-center">
+      Type a word below and I'll fetch the main sign image from the BSL dictionary.<br>
+      You can keep adding more words — all signs will stay on the page.
+    </p>
+
+    <!-- Word input and button -->
+    <div class="w-full flex gap-2">
+      <input type="text" id="wordInput" placeholder="e.g. apple"
+             class="flex-grow p-4 text-xl border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none transition-all duration-300">
+      <button id="findButton"
+              class="bg-blue-600 text-white p-4 rounded-xl text-xl font-bold hover:bg-blue-700 transition-colors duration-300">
+        Add Sign
+      </button>
+    </div>
+
+    <!-- Results -->
+    <div id="results"
+         class="w-full flex flex-wrap justify-center gap-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 transition-all duration-300 p-4 text-center">
+      <p class="text-gray-500 text-lg font-medium w-full">The BSL sign images will appear here.</p>
+    </div>
+  </div>
+
+  <script>
+    const wordInput = document.getElementById("wordInput");
+    const findButton = document.getElementById("findButton");
+    const resultsDiv = document.getElementById("results");
+
+    function createLoadingCard(word) {
+      const container = document.createElement("div");
+      container.className = "flex flex-col items-center w-40";
+      container.innerHTML = `
+        <div class="flex flex-col items-center space-y-2 text-gray-700">
+          <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 
+                     5.291A7.962 7.962 0 014 12H0c0 
+                     3.042 1.135 5.824 3 7.938l3-2.647z"/>
+          </svg>
+          <span class="text-xl">Loading...</span>
+        </div>
+        <p class="mt-2 font-bold text-gray-700">${word}</p>
+      `;
+      resultsDiv.appendChild(container);
+      return container;
+    }
+
+    async function fetchAndExtract() {
+      const word = wordInput.value.trim().toLowerCase();
+      if (!word) return;
+
+      const url = `https://www.british-sign.co.uk/british-sign-language/how-to-sign/${encodeURIComponent(word)}/`;
+      const card = createLoadingCard(word);
+
+      try {
+        const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+        const res = await fetch(proxyUrl);
+        const html = await res.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        const base = new URL(url);
+
+        const imageEls = [...doc.querySelectorAll("img")];
+        const imageUrls = imageEls.map(el => new URL(el.getAttribute("src"), base).href);
+
+        if (imageUrls.length === 0) {
+          card.innerHTML = `<p class="text-red-600">No images found for "${word}".</p>`;
+          return;
+        }
+
+        let largestImageUrl = null;
+        let maxArea = 0;
+
+        const loadPromises = imageUrls.map(imageUrl => new Promise(resolve => {
+          const img = new Image();
+          img.onload = () => {
+            const area = img.naturalWidth * img.naturalHeight;
+            if (area > maxArea) {
+              maxArea = area;
+              largestImageUrl = imageUrl;
+            }
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = imageUrl;
+        }));
+
+        await Promise.all(loadPromises);
+
+        if (largestImageUrl) {
+          card.innerHTML = `
+            <img src="${largestImageUrl}" alt="BSL sign for ${word}"
+                 class="rounded-lg max-w-full max-h-40 mx-auto shadow-lg">
+            <p class="mt-2 font-bold text-gray-700">${word}</p>
+          `;
+        } else {
+          card.innerHTML = `<p class="text-red-600">Could not determine image for "${word}".</p>`;
+        }
+
+      } catch (e) {
+        console.error(e);
+        card.innerHTML = `<p class="text-red-600">Error fetching sign for "${word}".</p>`;
+      }
+    }
+
+    findButton.addEventListener("click", () => {
+      fetchAndExtract();
+      wordInput.value = "";
+    });
+
+    wordInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        fetchAndExtract();
+        wordInput.value = "";
+      }
+    });
+  </script>
+</body>
+</html>
